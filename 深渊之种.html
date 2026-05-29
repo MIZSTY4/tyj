@@ -1,0 +1,2218 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>深渊之种 · Seeds of the Abyss</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
+:root {
+  --bg-deep: #1a0a2e;
+  --bg-mid: #16213e;
+  --bg-surface: #1e2a4a;
+  --panel-bg: linear-gradient(180deg, rgba(30,42,74,0.95), rgba(18,28,50,0.95));
+  --card-bg: linear-gradient(160deg, #f5f0e8 0%, #e8dfd0 30%, #ddd4c2 100%);
+  --card-bg-hover: linear-gradient(160deg, #fff8f0 0%, #f0e8d8 30%, #e8dcc8 100%);
+  --text-dark: #3d3027;
+  --text-light: #e8dfd0;
+  --text-dim: #9a8c7a;
+  --gold: #d4a843;
+  --gold-bright: #f0c85a;
+  --gold-dark: #8b6914;
+  --attack: #c0392b;
+  --attack-glow: #f05040;
+  --attack-light: #ff6050;
+  --skill: #1a6daa;
+  --skill-glow: #3da0e0;
+  --skill-light: #60c0ff;
+  --power: #9b59b6;
+  --power-glow: #c090e0;
+  --power-light: #d8a8f0;
+  --energy: #f0c85a;
+  --block: #5dade2;
+  --block-light: #80d4ff;
+  --hp-green: #2ecc71;
+  --hp-red: #e74c3c;
+  --vulnerable: #e67e22;
+  --weak: #9b59b6;
+  --strength: #e74c3c;
+  --border-color: rgba(180,150,100,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: radial-gradient(ellipse at 50% 30%, #1e1840 0%, #0d0a20 50%, #090618 100%);
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh;
+  font-family: 'Noto Serif SC', 'Georgia', 'SimSun', serif;
+  overflow: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 80%, rgba(120,60,180,0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(180,120,60,0.06) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(60,120,200,0.04) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#game {
+  width: 900px; height: 640px;
+  background: linear-gradient(180deg, #1a1040 0%, #16203a 50%, #1a0a2e 100%);
+  position: relative;
+  border: 3px solid;
+  border-image: linear-gradient(135deg, #8b6914, #d4a843, #f0c85a, #d4a843, #8b6914) 1;
+  box-shadow:
+    0 0 80px rgba(120,60,180,0.15),
+    0 0 40px rgba(180,150,100,0.1),
+    inset 0 0 120px rgba(0,0,0,0.3),
+    0 4px 20px rgba(0,0,0,0.6);
+  overflow: hidden;
+  user-select: none;
+  border-radius: 4px;
+  z-index: 1;
+}
+
+#game::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(208,168,64,0.3) 10%,
+    #d4a843 20%, #f0c85a 50%,
+    #d4a843 80%, rgba(208,168,64,0.3) 90%,
+    transparent 100%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+#bg-particles { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.particle {
+  position: absolute;
+  background: rgba(200,170,100,0.2);
+  border-radius: 50%;
+  animation: floatUp 8s linear infinite;
+  box-shadow: 0 0 6px rgba(200,170,100,0.15);
+}
+.particle:nth-child(odd) { background: rgba(150,120,200,0.15); box-shadow: 0 0 6px rgba(150,120,200,0.1); }
+@keyframes floatUp {
+  0% { transform: translateY(100vh) scale(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 0.5; }
+  100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+}
+
+/* ---- Enemy Area ---- */
+#enemy-area {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  width: 380px; text-align: center;
+  background: linear-gradient(180deg, rgba(20,10,40,0.6), rgba(20,10,40,0.2));
+  border: 1px solid rgba(180,150,100,0.2);
+  border-radius: 8px;
+  padding: 10px 0 6px;
+  backdrop-filter: blur(4px);
+}
+
+#enemy-sprite {
+  width: 100px; height: 120px; margin: 0 auto 6px;
+  position: relative;
+  transition: transform 0.15s;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+}
+
+#enemy-sprite::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; left: 50%; transform: translateX(-50%);
+  width: 70px; height: 8px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.4) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+#enemy-sprite.shake { animation: shake 0.4s ease-out; }
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+
+#enemy-name {
+  font-size: 18px;
+  color: #f8d0c0;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+  text-shadow: 0 0 12px rgba(255,120,100,0.4), 0 2px 4px rgba(0,0,0,0.5);
+  font-weight: 700;
+}
+
+#enemy-hp-outer {
+  width: 260px; height: 16px;
+  background: linear-gradient(180deg, #1a0a0a, #2a0a0a);
+  border: 1px solid rgba(200,120,100,0.4);
+  margin: 0 auto 4px; border-radius: 3px; overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+}
+#enemy-hp-inner {
+  height: 100%;
+  background: linear-gradient(90deg, #a02020, #e74c3c 50%, #f06050);
+  transition: width 0.4s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+}
+#enemy-hp-text { font-size: 11px; color: #ccb8a8; margin-top: -17px; position: relative; }
+
+#enemy-block { color: var(--block-light); font-size: 12px; margin-bottom: 4px; min-height: 16px; text-shadow: 0 0 8px rgba(93,173,226,0.4); }
+
+#enemy-intent {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(180deg, rgba(30,20,10,0.8), rgba(15,10,5,0.8));
+  border: 1px solid rgba(180,150,100,0.4);
+  padding: 3px 14px; border-radius: 14px; font-size: 13px; color: #f0e0c8;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+#enemy-intent .icon { font-size: 18px; }
+#enemy-status { margin-top: 4px; min-height: 20px; }
+.status-tag {
+  display: inline-block; padding: 1px 8px; border-radius: 8px;
+  font-size: 11px; margin: 0 2px; font-weight: 600;
+}
+.status-tag.vuln {
+  background: rgba(230,126,34,0.2);
+  color: #f0a060;
+  border: 1px solid rgba(230,126,34,0.5);
+}
+.status-tag.weak {
+  background: rgba(155,89,182,0.2);
+  color: #c090e0;
+  border: 1px solid rgba(155,89,182,0.5);
+}
+
+/* ---- Combat Log ---- */
+#combat-log {
+  position: absolute; top: 264px; left: 50%; transform: translateX(-50%);
+  width: 400px; max-height: 56px; overflow: hidden;
+  font-size: 12px; color: var(--text-dim); text-align: center; line-height: 1.6;
+}
+
+/* ---- Player Area ---- */
+#player-area {
+  position: absolute; bottom: 170px; left: 50%; transform: translateX(-50%);
+  width: 520px; display: flex; align-items: center; justify-content: center; gap: 14px;
+  background: linear-gradient(180deg, rgba(20,15,35,0.7), rgba(20,15,35,0.3));
+  border: 1px solid rgba(180,150,100,0.15);
+  border-radius: 6px;
+  padding: 6px 16px;
+  backdrop-filter: blur(3px);
+}
+
+#player-hp-outer {
+  width: 200px; height: 16px;
+  background: linear-gradient(180deg, #1a0a0a, #1a1a0a);
+  border: 1px solid rgba(100,180,100,0.4);
+  border-radius: 3px; overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+}
+#player-hp-inner {
+  height: 100%;
+  background: linear-gradient(90deg, #27ae60, #2ecc71 50%, #58d68d);
+  transition: width 0.4s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+}
+#player-hp-text { font-size: 11px; color: #b8cca8; margin-top: -16px; position: relative; text-align: center; }
+
+.stat-icon {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 14px; color: #f0e8d8;
+  background: rgba(0,0,0,0.3);
+  padding: 3px 10px; border-radius: 12px;
+  border: 1px solid rgba(180,150,100,0.2);
+}
+.stat-icon.energy { color: var(--gold-bright); border-color: rgba(208,168,64,0.3); text-shadow: 0 0 8px rgba(240,200,90,0.4); }
+.stat-icon.block { color: var(--block-light); border-color: rgba(93,173,226,0.3); text-shadow: 0 0 8px rgba(93,173,226,0.4); }
+.stat-icon.str { color: #f06050; border-color: rgba(240,96,80,0.3); text-shadow: 0 0 8px rgba(240,96,80,0.4); }
+
+/* ---- Hand Area ---- */
+#hand-area {
+  position: absolute; bottom: 55px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 0; justify-content: center; min-width: 100px;
+}
+
+.card {
+  width: 100px; min-width: 100px; height: 140px;
+  background: linear-gradient(160deg, #fcf6ec 0%, #f0e6d4 25%, #e6dcc8 100%);
+  border: 2px solid #b0a080;
+  border-radius: 8px;
+  cursor: pointer; position: relative; flex-shrink: 0;
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s, opacity 0.18s;
+  margin-left: -20px; padding: 5px 7px;
+  display: flex; flex-direction: column;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.card:first-child { margin-left: 0; }
+.card:hover {
+  transform: translateY(-24px) scale(1.07);
+  z-index: 10;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.card:hover .card-border { opacity: 1; }
+
+.card.attack {
+  border-color: #c0392b;
+  background: linear-gradient(160deg, #fff5f5 0%, #fbe8e4 25%, #f0d8d0 100%);
+}
+.card.attack:hover {
+  border-color: #f05040;
+  box-shadow: 0 10px 30px rgba(192,57,43,0.35), 0 0 20px rgba(255,60,40,0.1), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.card.skill {
+  border-color: #1a6daa;
+  background: linear-gradient(160deg, #f5f8ff 0%, #e4ecf8 25%, #d0e0f0 100%);
+}
+.card.skill:hover {
+  border-color: #3da0e0;
+  box-shadow: 0 10px 30px rgba(26,109,170,0.35), 0 0 20px rgba(60,160,230,0.1), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.card.power {
+  border-color: #9b59b6;
+  background: linear-gradient(160deg, #fdf5ff 0%, #f4e8fa 25%, #ecd8f0 100%);
+}
+.card.power:hover {
+  border-color: #c090e0;
+  box-shadow: 0 10px 30px rgba(155,89,182,0.35), 0 0 20px rgba(190,140,220,0.1), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.card.unplayable { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.5); }
+.card.unplayable:hover { transform: none; box-shadow: none; z-index: auto; }
+
+.card-cost {
+  position: absolute; top: -6px; left: -6px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #f0d870, #c9a81a);
+  color: #3d2010;
+  font-size: 13px; font-weight: bold;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #a08020;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,200,0.3);
+  z-index: 2;
+}
+
+.card-name {
+  font-size: 11px; font-weight: 700; color: #3d3027;
+  margin: 0 0 2px 20px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-type-label {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
+  margin-bottom: 3px; margin-left: 2px; font-weight: 600;
+}
+.card.attack .card-type-label { color: #a02020; }
+.card.skill .card-type-label { color: #1a5a88; }
+.card.power .card-type-label { color: #7b3d9e; }
+
+.card-desc {
+  font-size: 10px; color: #5a4d3d; line-height: 1.35;
+  flex: 1;
+}
+.card-desc .hl { color: #c9a81a; font-weight: bold; }
+
+.card-art {
+  flex: 1; border-radius: 4px; margin: 2px 0; min-height: 34px;
+  background: linear-gradient(180deg, rgba(200,180,150,0.25), rgba(180,160,130,0.1));
+  border: 1px dashed rgba(180,160,130,0.3);
+}
+
+.card-border {
+  position: absolute; inset: -3px; border-radius: 11px;
+  border: 2px solid transparent; pointer-events: none; opacity: 0;
+  transition: opacity 0.18s;
+}
+
+.card.played {
+  animation: playCard 0.5s ease-out forwards; pointer-events: none;
+}
+@keyframes playCard {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  40% { transform: translateY(-60px) scale(1.1); opacity: 1; }
+  100% { transform: translateY(-120px) scale(0.6); opacity: 0; }
+}
+
+/* ---- Potions ---- */
+#potion-area {
+  position: absolute; top: 10px; left: 160px;
+  display: flex; gap: 6px; z-index: 20;
+}
+.potion-slot {
+  width: 36px; height: 44px;
+  background: linear-gradient(180deg, rgba(30,20,50,0.8), rgba(15,10,30,0.8));
+  border: 2px solid rgba(180,150,100,0.3);
+  border-radius: 6px;
+  cursor: pointer; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.potion-slot:hover {
+  border-color: rgba(240,200,90,0.6);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 0 12px rgba(240,200,90,0.15);
+  transform: translateY(-2px);
+}
+.potion-slot.empty { border-style: dashed; opacity: 0.5; }
+.potion-slot .potion-icon {
+  font-size: 20px; line-height: 1;
+  text-shadow: 0 0 6px currentColor;
+}
+.potion-slot .potion-tooltip {
+  display: none; position: absolute; top: 48px; left: 50%;
+  transform: translateX(-50%); width: 160px;
+  background: rgba(20,15,35,0.95);
+  border: 1px solid rgba(180,150,100,0.4);
+  border-radius: 6px; padding: 8px 10px;
+  font-size: 11px; color: #d8c8b0; line-height: 1.5;
+  text-align: center; z-index: 30;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.potion-slot:hover .potion-tooltip { display: block; }
+
+/* ---- Relics ---- */
+#relic-area {
+  position: absolute; bottom: 175px; right: 20px;
+  display: flex; flex-direction: column; gap: 4px;
+  z-index: 20; max-height: 140px; overflow-y: auto;
+}
+.relic-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, rgba(40,30,60,0.9), rgba(20,15,40,0.9));
+  border: 2px solid rgba(180,150,100,0.35);
+  border-radius: 6px;
+  cursor: pointer; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+.relic-icon:hover {
+  border-color: rgba(240,200,90,0.6);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4), 0 0 10px rgba(200,160,80,0.2);
+  transform: scale(1.08);
+}
+.relic-icon .relic-emoji {
+  font-size: 18px; line-height: 1;
+}
+.relic-icon .relic-tooltip {
+  display: none; position: absolute; right: 44px; top: 50%;
+  transform: translateY(-50%); width: 170px;
+  background: rgba(20,15,35,0.95);
+  border: 1px solid rgba(180,150,100,0.4);
+  border-radius: 6px; padding: 8px 10px;
+  font-size: 11px; color: #d8c8b0; line-height: 1.5;
+  text-align: left; z-index: 30;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.relic-icon:hover .relic-tooltip { display: block; }
+
+/* ---- Deck Viewer ---- */
+#deck-viewer-btn {
+  position: absolute; bottom: 10px; right: 16px;
+  width: 36px; height: 36px;
+  background: linear-gradient(180deg, rgba(40,30,60,0.9), rgba(20,15,40,0.9));
+  border: 2px solid rgba(180,150,100,0.35);
+  border-radius: 6px;
+  cursor: pointer; z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: var(--gold);
+  transition: all 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+#deck-viewer-btn:hover {
+  border-color: rgba(240,200,90,0.6);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 0 12px rgba(240,200,90,0.15);
+}
+
+#deck-viewer-overlay {
+  position: absolute; inset: 0; z-index: 100;
+  background: rgba(10,5,20,0.92);
+  display: none; flex-direction: column;
+  align-items: center; padding: 30px 20px;
+  overflow-y: auto;
+}
+#deck-viewer-overlay.visible { display: flex; }
+#deck-viewer-overlay h3 {
+  font-size: 18px; color: #f0d870; letter-spacing: 3px;
+  margin-bottom: 14px; text-shadow: 0 0 16px rgba(240,200,90,0.4);
+}
+#deck-viewer-close {
+  position: absolute; top: 12px; right: 20px;
+  font-size: 22px; color: #aaa; cursor: pointer;
+  transition: color 0.15s;
+}
+#deck-viewer-close:hover { color: #f0d870; }
+#deck-viewer-grid {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  justify-content: center; max-width: 800px;
+}
+.deck-viewer-card {
+  width: 110px; height: 150px;
+  background: linear-gradient(160deg, #fcf6ec 0%, #f0e6d4 25%, #e6dcc8 100%);
+  border: 2px solid #b0a080;
+  border-radius: 8px;
+  padding: 6px 7px;
+  display: flex; flex-direction: column;
+  font-size: 10px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+  position: relative;
+}
+.deck-viewer-card.attack { border-color: #c0392b; background: linear-gradient(160deg, #fff5f5 0%, #fbe8e4 25%, #f0d8d0 100%); }
+.deck-viewer-card.skill { border-color: #1a6daa; background: linear-gradient(160deg, #f5f8ff 0%, #e4ecf8 25%, #d0e0f0 100%); }
+.deck-viewer-card.power { border-color: #9b59b6; background: linear-gradient(160deg, #fdf5ff 0%, #f4e8fa 25%, #ecd8f0 100%); }
+.deck-viewer-card .card-cost {
+  position: absolute; top: -4px; left: -4px;
+  width: 20px; height: 20px; font-size: 11px;
+}
+.deck-viewer-card .card-name { font-size: 11px; margin-bottom: 1px; }
+.deck-viewer-card .card-desc { font-size: 9px; }
+
+/* ---- Controls ---- */
+#controls {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 18px;
+}
+
+#deck-info {
+  font-size: 11px;
+  color: #b0a090;
+  min-width: 130px; text-align: center;
+  background: rgba(20,15,35,0.5);
+  padding: 4px 12px; border-radius: 12px;
+  border: 1px solid rgba(180,150,100,0.15);
+}
+
+#end-turn-btn {
+  padding: 10px 32px; font-size: 15px;
+  background: linear-gradient(180deg, #5a3a1a, #3d2010);
+  color: #f0d870;
+  border: 2px solid #a08020;
+  border-radius: 6px;
+  cursor: pointer; letter-spacing: 2px; font-family: inherit;
+  transition: all 0.15s;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,200,0.1);
+  text-shadow: 0 0 8px rgba(240,216,112,0.4);
+}
+#end-turn-btn:hover {
+  background: linear-gradient(180deg, #7a4a2a, #5d3018);
+  border-color: #d4a843;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 20px rgba(240,200,80,0.15), inset 0 1px 0 rgba(255,255,200,0.15);
+}
+#end-turn-btn:active { transform: scale(0.96); }
+#end-turn-btn:disabled {
+  opacity: 0.3; cursor: not-allowed;
+  box-shadow: none;
+}
+
+#turn-indicator {
+  position: absolute; top: 10px; right: 16px;
+  font-size: 12px;
+  color: #b0a090;
+  letter-spacing: 1px;
+  background: rgba(20,15,35,0.5);
+  padding: 3px 12px; border-radius: 10px;
+  border: 1px solid rgba(180,150,100,0.15);
+}
+
+.ftext {
+  position: absolute; pointer-events: none; font-weight: bold;
+  font-size: 20px; animation: ftextAnim 1.1s ease-out forwards; z-index: 50;
+  text-shadow: 0 0 10px currentColor, 0 2px 4px rgba(0,0,0,0.5);
+}
+@keyframes ftextAnim {
+  0% { opacity: 1; transform: translateY(0) scale(0.8); }
+  30% { opacity: 1; transform: translateY(-22px) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.7); }
+}
+
+/* Overlay screens */
+.overlay {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, rgba(20,15,50,0.92), rgba(10,5,25,0.95));
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; z-index: 100; gap: 14px;
+  backdrop-filter: blur(2px);
+}
+.overlay h2 { font-size: 38px; color: #f0d870; letter-spacing: 6px; text-shadow: 0 0 30px rgba(240,200,90,0.5), 0 2px 4px rgba(0,0,0,0.6); }
+.overlay h3 { font-size: 18px; color: #d8c8b0; letter-spacing: 3px; }
+.overlay p { color: #b0a090; font-size: 13px; text-align: center; max-width: 420px; line-height: 1.7; }
+.overlay .btn {
+  padding: 10px 30px; font-size: 15px;
+  background: linear-gradient(180deg, #5a3a1a, #3d2010);
+  color: #f0d870;
+  border: 2px solid #a08020;
+  border-radius: 6px;
+  cursor: pointer; letter-spacing: 3px; font-family: inherit;
+  transition: all 0.15s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  text-shadow: 0 0 8px rgba(240,216,112,0.3);
+}
+.overlay .btn:hover {
+  background: linear-gradient(180deg, #7a4a2a, #5d3018);
+  border-color: #d4a843;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6), 0 0 24px rgba(240,200,80,0.2);
+}
+
+#card-reward { flex-direction: row; flex-wrap: wrap; gap: 16px; }
+#card-reward h3 { width: 100%; text-align: center; margin-bottom: 8px; }
+
+/* ---- Relic Reward Overlay ---- */
+#relic-reward-overlay {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.relic-reward-box {
+  width: 260px; padding: 16px;
+  background: linear-gradient(135deg, rgba(40,30,60,0.95), rgba(20,15,40,0.95));
+  border: 2px solid rgba(240,200,90,0.5);
+  border-radius: 10px;
+  text-align: center; cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(240,200,90,0.1);
+}
+.relic-reward-box:hover {
+  border-color: rgba(240,200,90,0.8);
+  box-shadow: 0 6px 28px rgba(0,0,0,0.6), 0 0 30px rgba(240,200,90,0.2);
+  transform: translateY(-3px);
+}
+.relic-reward-box .relic-reward-icon { font-size: 42px; margin-bottom: 6px; }
+.relic-reward-box .relic-reward-name { font-size: 16px; color: #f0d870; font-weight: 700; margin-bottom: 4px; text-shadow: 0 0 10px rgba(240,200,90,0.3); }
+.relic-reward-box .relic-reward-desc { font-size: 12px; color: #b0a090; line-height: 1.5; }
+
+.reward-card {
+  width: 120px; height: 170px;
+  background: linear-gradient(160deg, #fcf6ec 0%, #f0e6d4 25%, #e6dcc8 100%);
+  border: 2px solid #b0a080;
+  border-radius: 8px;
+  cursor: pointer; padding: 10px 8px;
+  display: flex; flex-direction: column;
+  transition: all 0.15s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.reward-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.reward-card.attack { border-color: #c0392b; background: linear-gradient(160deg, #fff5f5 0%, #fbe8e4 25%, #f0d8d0 100%); }
+.reward-card.attack:hover { border-color: #f05040; box-shadow: 0 10px 28px rgba(192,57,43,0.35), 0 0 20px rgba(255,60,40,0.1), inset 0 1px 0 rgba(255,255,255,0.2); }
+.reward-card.skill { border-color: #1a6daa; background: linear-gradient(160deg, #f5f8ff 0%, #e4ecf8 25%, #d0e0f0 100%); }
+.reward-card.skill:hover { border-color: #3da0e0; box-shadow: 0 10px 28px rgba(26,109,170,0.35), 0 0 20px rgba(60,160,230,0.1), inset 0 1px 0 rgba(255,255,255,0.2); }
+.reward-card.power { border-color: #9b59b6; background: linear-gradient(160deg, #fdf5ff 0%, #f4e8fa 25%, #ecd8f0 100%); }
+.reward-card.power:hover { border-color: #c090e0; box-shadow: 0 10px 28px rgba(155,89,182,0.35), 0 0 20px rgba(190,140,220,0.1), inset 0 1px 0 rgba(255,255,255,0.2); }
+.reward-card .card-name { font-size: 13px; }
+.reward-card .card-desc { font-size: 11px; }
+.reward-card .card-cost { font-size: 15px; width: 26px; height: 26px; }
+
+#skip-reward {
+  font-size: 12px; color: #999; cursor: pointer;
+  margin-top: 6px; width: 100%; text-align: center;
+  transition: color 0.15s;
+}
+#skip-reward:hover { color: #f0d870; }
+
+#victory-stats { color: #b8a890; font-size: 14px; text-align: center; line-height: 1.8; }
+
+#level-indicator {
+  background: rgba(20,15,35,0.5);
+  padding: 3px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(212,168,67,0.2);
+}
+
+/* ---- Potion Shop Overlay ---- */
+#potion-reward-overlay {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.potion-reward-box {
+  width: 240px; padding: 14px;
+  background: linear-gradient(180deg, rgba(30,20,50,0.95), rgba(15,10,30,0.95));
+  border: 2px solid rgba(180,150,100,0.35);
+  border-radius: 8px;
+  text-align: center; cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+}
+.potion-reward-box:hover {
+  border-color: rgba(240,200,90,0.6);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 16px rgba(240,200,90,0.1);
+  transform: translateY(-2px);
+}
+.potion-reward-box .potion-reward-icon { font-size: 36px; margin-bottom: 4px; }
+.potion-reward-box .potion-reward-name { font-size: 15px; color: #f0d870; font-weight: 700; margin-bottom: 3px; }
+.potion-reward-box .potion-reward-desc { font-size: 11px; color: #b0a090; line-height: 1.4; }
+
+/* ===== Combat FX ===== */
+#screen-overlay {
+  position:absolute;inset:0;pointer-events:none;z-index:85;
+  background:transparent;transition:background 0.08s;
+}
+#screen-overlay.flash-hit { background:rgba(255,40,30,0.2); }
+#screen-overlay.flash-boss { background:rgba(120,0,220,0.25); }
+#screen-overlay.flash-power { background:rgba(240,200,100,0.12); }
+
+@keyframes screenShake {
+  0%,100%{transform:translate(0)}
+  10%{transform:translate(-6px,3px)}
+  20%{transform:translate(6px,-3px)}
+  30%{transform:translate(-4px,-2px)}
+  40%{transform:translate(4px,2px)}
+  50%{transform:translate(-3px,4px)}
+  60%{transform:translate(3px,-4px)}
+  70%{transform:translate(-1px,-1px)}
+  80%{transform:translate(1px,1px)}
+}
+#game.shake-boss { animation:screenShake 0.6s ease-out; }
+#game.shake-hit { animation:screenShake 0.3s ease-out; }
+
+.player-aura {
+  position:absolute;width:80px;height:80px;border-radius:50%;
+  pointer-events:none;z-index:55;
+  box-shadow:0 0 20px rgba(240,100,70,0.5),0 0 40px rgba(240,100,70,0.2);
+  animation:auraPulse 1.2s ease-in-out infinite;
+}
+@keyframes auraPulse {
+  0%,100%{box-shadow:0 0 20px rgba(240,100,70,0.4),0 0 40px rgba(240,100,70,0.1)}
+  50%{box-shadow:0 0 40px rgba(240,100,70,0.7),0 0 70px rgba(240,100,70,0.25)}
+}
+
+.card-projectile {
+  position:absolute;pointer-events:none;z-index:80;
+  width:50px;height:70px;
+  background:linear-gradient(160deg,#f05040,#c0392b);
+  border-radius:4px;border:1px solid #ff6050;
+  box-shadow:0 0 20px rgba(240,80,60,0.8),0 0 40px rgba(240,80,60,0.3);
+  transform:rotate(-15deg);
+}
+
+.shield-ring {
+  position:absolute;border-radius:50%;pointer-events:none;z-index:75;
+  border:3px solid var(--block-light);
+  box-shadow:0 0 12px rgba(93,173,226,0.5), inset 0 0 12px rgba(93,173,226,0.2);
+  animation:shieldExpand 0.7s ease-out forwards;
+}
+@keyframes shieldExpand {
+  0%{width:30px;height:30px;opacity:1;margin-left:-15px;margin-top:-15px}
+  100%{width:180px;height:180px;opacity:0;margin-left:-90px;margin-top:-90px}
+}
+
+.power-rune {
+  position:absolute;pointer-events:none;z-index:80;
+  font-size:36px;
+  filter:drop-shadow(0 0 12px #d4a843);
+  animation:runeFall 1.2s ease-out forwards;
+}
+@keyframes runeFall {
+  0%{transform:translateY(-80px) scale(0.3) rotate(-30deg);opacity:0}
+  25%{transform:translateY(0) scale(1.3) rotate(10deg);opacity:1}
+  60%{transform:translateY(10px) scale(1);opacity:0.7}
+  100%{transform:translateY(40px) scale(0.5);opacity:0}
+}
+
+.death-particle {
+  position:absolute;pointer-events:none;z-index:80;
+  border-radius:50%;
+  animation:deathBurst 1s ease-out forwards;
+}
+@keyframes deathBurst {
+  0%{transform:translate(0,0) scale(1);opacity:1}
+  100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}
+}
+
+.block-shatter {
+  position:absolute;pointer-events:none;z-index:70;
+  width:7px;height:7px;background:var(--block-light);border-radius:1px;
+  box-shadow:0 0 6px var(--block-light);
+  animation:shatterFly 0.6s ease-out forwards;
+}
+@keyframes shatterFly {
+  0%{transform:translate(0,0) scale(1);opacity:1}
+  100%{transform:translate(var(--sx),var(--sy)) scale(0.3);opacity:0}
+}
+
+#enemy-sprite.hit-flash { filter:brightness(2.5) saturate(0); transition:filter 0.06s; }
+
+#enemy-sprite.boss-entrance {
+  animation:bossEntrance 1s ease-out;
+}
+@keyframes bossEntrance {
+  0%{transform:scale(0) rotate(180deg);opacity:0}
+  40%{transform:scale(1.3) rotate(-10deg);opacity:1}
+  70%{transform:scale(0.9) rotate(3deg)}
+  100%{transform:scale(1) rotate(0)}
+}
+</style>
+</head>
+<body>
+
+<div id="game">
+  <div id="bg-particles"></div>
+  <div id="screen-overlay"></div>
+
+  <!-- Top bar -->
+  <div id="level-indicator" style="position:absolute;top:10px;left:16px;font-size:12px;color:var(--gold);letter-spacing:1px;"></div>
+  <div id="potion-area"></div>
+  <div id="turn-indicator">第 1 回合</div>
+
+  <!-- Enemy -->
+  <div id="enemy-area">
+    <div id="enemy-sprite"></div>
+    <div id="enemy-name"></div>
+    <div id="enemy-hp-outer"><div id="enemy-hp-inner"></div></div>
+    <div id="enemy-hp-text"></div>
+    <div id="enemy-block"></div>
+    <div id="enemy-intent"></div>
+    <div id="enemy-status"></div>
+  </div>
+
+  <div id="combat-log"></div>
+
+  <!-- Relics -->
+  <div id="relic-area"></div>
+
+  <!-- Player -->
+  <div id="player-area">
+    <div id="player-hp-outer"><div id="player-hp-inner"></div></div>
+    <div id="player-hp-text"></div>
+    <span class="stat-icon energy">⚡ <span id="energy-val">3/3</span></span>
+    <span class="stat-icon block" id="block-stat" style="display:none">🛡️ <span id="block-val">0</span></span>
+    <span class="stat-icon str" id="str-stat" style="display:none">💪 <span id="str-val">0</span></span>
+  </div>
+  <div id="player-status" style="position:absolute;bottom:148px;left:50%;transform:translateX(-50%);min-height:18px;font-size:11px;"></div>
+  <div id="player-aura" style="position:absolute;bottom:168px;left:50%;transform:translate(-50%,-50%);display:none;"></div>
+
+  <!-- Hand -->
+  <div id="hand-area"></div>
+
+  <!-- Controls -->
+  <div id="controls">
+    <span id="deck-info"></span>
+    <button id="end-turn-btn" disabled>结束回合</button>
+    <span style="font-size:10px;color:#888;position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap">按 <b style="color:#d4a843">E</b> 键结束回合</span>
+  </div>
+
+  <!-- Deck Viewer Button -->
+  <div id="deck-viewer-btn" title="查看牌组">📚</div>
+
+  <!-- Deck Viewer Overlay -->
+  <div id="deck-viewer-overlay">
+    <div id="deck-viewer-close">✕</div>
+    <h3>📚 我的牌组</h3>
+    <div id="deck-viewer-grid"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const $ = id => document.getElementById(id);
+
+  const gameEl = $('game');
+  const screenOverlay = $('screen-overlay');
+  const handArea = $('hand-area');
+  const endTurnBtn = $('end-turn-btn');
+  const deckInfo = $('deck-info');
+  const combatLog = $('combat-log');
+  const turnIndicator = $('turn-indicator');
+  const levelIndicator = $('level-indicator');
+  const enemySprite = $('enemy-sprite');
+  const enemyNameEl = $('enemy-name');
+  const enemyHpInner = $('enemy-hp-inner');
+  const enemyHpText = $('enemy-hp-text');
+  const enemyBlockEl = $('enemy-block');
+  const enemyIntentEl = $('enemy-intent');
+  const enemyStatusEl = $('enemy-status');
+  const playerHpInner = $('player-hp-inner');
+  const playerHpText = $('player-hp-text');
+  const energyVal = $('energy-val');
+  const blockStat = $('block-stat');
+  const blockVal = $('block-val');
+  const strStat = $('str-stat');
+  const strVal = $('str-val');
+  const potionArea = $('potion-area');
+  const relicArea = $('relic-area');
+  const deckViewerBtn = $('deck-viewer-btn');
+  const deckViewerOverlay = $('deck-viewer-overlay');
+  const deckViewerClose = $('deck-viewer-close');
+  const deckViewerGrid = $('deck-viewer-grid');
+
+  let G = null;
+  let animLock = false;
+  let turnCount = 0;
+
+  // ============ Potion Definitions ============
+  const POTION_DEFS = {
+    health_potion: { id:'health_potion', name:'生命药水', emoji:'🧪', desc:'恢复最大生命值的 <b>25%</b>。', rarity:'common' },
+    block_potion: { id:'block_potion', name:'护盾药水', emoji:'🛡️', desc:'获得 <b>15</b> 点格挡。', rarity:'common' },
+    strength_potion: { id:'strength_potion', name:'力量灵药', emoji:'💪', desc:'本场战斗获得 <b>3</b> 点力量。', rarity:'common' },
+    energy_potion: { id:'energy_potion', name:'能量药水', emoji:'⚡', desc:'获得 <b>2</b> 点能量。', rarity:'common' },
+    fire_potion: { id:'fire_potion', name:'烈焰药水', emoji:'🔥', desc:'对敌人造成 <b>20</b> 点伤害。', rarity:'common' },
+    vuln_potion: { id:'vuln_potion', name:'易伤毒剂', emoji:'☠️', desc:'对敌人施加 <b>4</b> 层易伤。', rarity:'rare' },
+    weak_potion: { id:'weak_potion', name:'虚弱粉尘', emoji:'🌀', desc:'对敌人施加 <b>4</b> 层虚弱。', rarity:'rare' },
+    max_hp_potion: { id:'max_hp_potion', name:'生命精华', emoji:'💚', desc:'永久提升 <b>8</b> 点最大生命值，并恢复等量生命。', rarity:'rare' },
+    super_block_potion: { id:'super_block_potion', name:'壁垒合剂', emoji:'🔰', desc:'获得 <b>30</b> 点格挡。', rarity:'rare' },
+    mega_strength_potion: { id:'mega_strength_potion', name:'泰坦之力', emoji:'🦾', desc:'本场战斗获得 <b>6</b> 点力量。', rarity:'rare' },
+  };
+
+  function usePotion(potion, idx) {
+    if (G.turnPhase !== 'player' || animLock) return;
+    const p = G.player;
+    switch (potion.id) {
+      case 'health_potion':
+        const heal = Math.floor(p.maxHp * 0.25);
+        p.hp = Math.min(p.hp + heal, p.maxHp);
+        spawnFText('+' + heal + ' ❤️', gameEl.offsetWidth / 2, gameEl.offsetHeight - 200, '#2ecc71', '20px');
+        addLog('使用了 ' + potion.name + '，恢复了 ' + heal + ' 点生命。');
+        break;
+      case 'block_potion':
+        p.block += 15;
+        spawnFText('+15 🛡️', gameEl.offsetWidth / 2, gameEl.offsetHeight - 200, '#5dade2', '18px');
+        addLog('使用了 ' + potion.name + '，获得 15 点格挡。');
+        break;
+      case 'strength_potion':
+        p.strength += 3;
+        spawnFText('+3 力量', gameEl.offsetWidth / 2, gameEl.offsetHeight - 220, '#e74c3c', '18px');
+        addLog('使用了 ' + potion.name + '，获得 3 点力量。');
+        break;
+      case 'energy_potion':
+        p.energy = Math.min(p.energy + 2, p.maxEnergy + 3);
+        spawnFText('+2 ⚡', gameEl.offsetWidth / 2, gameEl.offsetHeight - 200, '#f1c40f', '18px');
+        addLog('使用了 ' + potion.name + '，获得 2 点能量。');
+        break;
+      case 'fire_potion':
+        addLog('使用了 ' + potion.name + '，造成 20 点伤害。');
+        animLock = true;
+        dealDamageToEnemy(20, 0, 0);
+        animLock = false;
+        if (G.enemy.hp <= 0) {
+          G.enemy.hp = 0;
+          renderAll();
+          setTimeout(function() { onEnemyDefeated(); }, 700);
+          break;
+        }
+        break;
+      case 'vuln_potion':
+        G.enemy.vulnerable = (G.enemy.vulnerable || 0) + 4;
+        spawnFText('易伤 +4', gameEl.offsetWidth / 2, 100, '#e67e22', '16px');
+        addLog('使用了 ' + potion.name + '，对敌人施加 4 层易伤。');
+        break;
+      case 'weak_potion':
+        G.enemy.weak = (G.enemy.weak || 0) + 4;
+        spawnFText('虚弱 +4', gameEl.offsetWidth / 2, 100, '#9b59b6', '16px');
+        addLog('使用了 ' + potion.name + '，对敌人施加 4 层虚弱。');
+        break;
+      case 'max_hp_potion':
+        p.maxHp += 8;
+        p.hp = Math.min(p.hp + 8, p.maxHp);
+        spawnFText('+8 最大生命', gameEl.offsetWidth / 2, gameEl.offsetHeight - 200, '#2ecc71', '18px');
+        addLog('使用了 ' + potion.name + '，最大生命值提升 8 点。');
+        break;
+      case 'super_block_potion':
+        p.block += 30;
+        spawnFText('+30 🛡️', gameEl.offsetWidth / 2, gameEl.offsetHeight - 200, '#5dade2', '18px');
+        addLog('使用了 ' + potion.name + '，获得 30 点格挡。');
+        break;
+      case 'mega_strength_potion':
+        p.strength += 6;
+        spawnFText('+6 力量', gameEl.offsetWidth / 2, gameEl.offsetHeight - 220, '#e74c3c', '20px');
+        addLog('使用了 ' + potion.name + '，获得 6 点力量。');
+        break;
+    }
+    G.potions.splice(idx, 1);
+    spawnPowerRunes();
+    renderAll();
+  }
+
+  // ============ Relic Definitions ============
+  const RELIC_DEFS = {
+    burning_blood: { id:'burning_blood', name:'燃烧之血', emoji:'🩸', desc:'每场战斗结束后恢复 <b>6</b> 点生命。', tier:'boss' },
+    vajra: { id:'vajra', name:'金刚杵', emoji:'🔱', desc:'每场战斗开始时获得 <b>1</b> 点力量。', tier:'boss' },
+    bag_of_prep: { id:'bag_of_prep', name:'备战提包', emoji:'🎒', desc:'每回合开始时多抽 <b>1</b> 张牌。', tier:'boss' },
+    anchor: { id:'anchor', name:'船锚', emoji:'⚓', desc:'每场战斗开始时获得 <b>8</b> 点格挡。', tier:'boss' },
+    lantern: { id:'lantern', name:'古提灯', emoji:'🏮', desc:'战斗开始时获得 <b>1</b> 点额外能量上限。', tier:'boss' },
+    smooth_stone: { id:'smooth_stone', name:'光滑石胆', emoji:'🪨', desc:'永久 +<b>1</b> 力量。', tier:'boss' },
+    old_coin: { id:'old_coin', name:'古金币', emoji:'🪙', desc:'最大生命值 +<b>12</b>。', tier:'boss' },
+    red_skull: { id:'red_skull', name:'红骷髅', emoji:'💀', desc:'生命低于 <b>50%</b> 时，额外获得 <b>2</b> 点力量。', tier:'elite' },
+    bronze_scales: { id:'bronze_scales', name:'青铜鳞甲', emoji:'🛡️', desc:'受到伤害时对敌人造成 <b>3</b> 点伤害。', tier:'elite' },
+    happy_flower: { id:'happy_flower', name:'快乐之花', emoji:'🌻', desc:'每 <b>3</b> 回合获得 <b>1</b> 点能量。', tier:'elite' },
+    data_disk: { id:'data_disk', name:'幽魂面具', emoji:'👻', desc:'每场战斗开始时获得 <b>1</b> 层"势不可挡"（受到的首次伤害减半）。', tier:'elite' },
+  };
+
+  const BOSS_RELIC_IDS = ['burning_blood','vajra','bag_of_prep','anchor','lantern','smooth_stone','old_coin'];
+  const ELITE_RELIC_IDS = ['red_skull','bronze_scales','happy_flower','data_disk'];
+
+  function hasRelic(id) {
+    return G.relics.some(r => r.id === id);
+  }
+
+  function getRelicCount(id) {
+    return G.relics.filter(r => r.id === id).length;
+  }
+
+  function addRelic(id) {
+    if (!RELIC_DEFS[id]) return;
+    const relic = Object.assign({}, RELIC_DEFS[id]);
+    G.relics.push(relic);
+    // Apply immediate effects
+    if (id === 'old_coin') {
+      G.player.maxHp += 12;
+      G.player.hp = Math.min(G.player.hp + 12, G.player.maxHp);
+    }
+    if (id === 'smooth_stone') {
+      G.player.strength += 1;
+    }
+  }
+
+  // ============ Card Definitions ============
+  const CARD_DEFS = {
+    strike: { name:'打击', type:'attack', cost:1, desc:'造成 <span class="hl">6</span> 点伤害。', baseDmg:6 },
+    defend: { name:'防御', type:'skill', cost:1, desc:'获得 <span class="hl">5</span> 点格挡。', baseBlock:5 },
+    bash: { name:'痛击', type:'attack', cost:2, desc:'造成 <span class="hl">8</span> 点伤害。施加 <span class="hl">2</span> 层易伤。', baseDmg:8, vuln:2 },
+  };
+
+  const REWARD_POOL = [
+    { id:'cleave', name:'横扫', type:'attack', cost:1, desc:'造成 <span class="hl">8</span> 点伤害。', baseDmg:8 },
+    { id:'iron_wave', name:'铁壁冲击', type:'attack', cost:1, desc:'获得 <span class="hl">5</span> 点格挡。造成 <span class="hl">5</span> 点伤害。', baseDmg:5, baseBlock:5 },
+    { id:'anger', name:'愤怒', type:'attack', cost:0, desc:'造成 <span class="hl">4</span> 点伤害。', baseDmg:4 },
+    { id:'clothesline', name:'金刚臂', type:'attack', cost:2, desc:'造成 <span class="hl">12</span> 点伤害。施加 <span class="hl">2</span> 层虚弱。', baseDmg:12, weak:2 },
+    { id:'headbutt', name:'头槌', type:'attack', cost:1, desc:'造成 <span class="hl">10</span> 点伤害。', baseDmg:10 },
+    { id:'pommel', name:'剑柄打击', type:'attack', cost:1, desc:'造成 <span class="hl">8</span> 点伤害。抽 <span class="hl">1</span> 张牌。', baseDmg:8, draw:1 },
+    { id:'shrug', name:'耸肩无视', type:'skill', cost:1, desc:'获得 <span class="hl">8</span> 点格挡。抽 <span class="hl">1</span> 张牌。', baseBlock:8, draw:1 },
+    { id:'spot_weak', name:'洞察弱点', type:'skill', cost:1, desc:'获得 <span class="hl">3</span> 点力量。', strength:3 },
+    { id:'inflame', name:'燃烧', type:'power', cost:1, desc:'获得 <span class="hl">2</span> 点力量。', strength:2 },
+    { id:'seeing_red', name:'充血', type:'skill', cost:0, desc:'获得 <span class="hl">2</span> 点能量。', energy:2 },
+    { id:'heavy_blade', name:'重刃', type:'attack', cost:2, desc:'造成 <span class="hl">15</span> 点伤害。', baseDmg:15 },
+    { id:'twin_strike', name:'双重打击', type:'attack', cost:1, desc:'造成 <span class="hl">5</span> 点伤害两次。', baseDmg:5, hits:2 },
+    { id:'armaments', name:'铁盾', type:'skill', cost:1, desc:'获得 <span class="hl">10</span> 点格挡。', baseBlock:10 },
+    { id:'uppercut', name:'上勾拳', type:'attack', cost:2, desc:'造成 <span class="hl">13</span> 点伤害。施加 <span class="hl">1</span> 层虚弱和 <span class="hl">1</span> 层易伤。', baseDmg:13, weak:1, vuln:1 },
+    { id:'thunderclap', name:'雷霆一击', type:'attack', cost:1, desc:'造成 <span class="hl">6</span> 点伤害，施加 <span class="hl">1</span> 层易伤。', baseDmg:6, vuln:1 },
+    { id:'sword_boomerang', name:'回旋镖', type:'attack', cost:1, desc:'造成 <span class="hl">3</span> 点伤害 <span class="hl">4</span> 次。', baseDmg:3, hits:4 },
+    { id:'wild_strike', name:'狂野打击', type:'attack', cost:1, desc:'造成 <span class="hl">14</span> 点伤害。', baseDmg:14 },
+    { id:'perfected_strike', name:'完美打击', type:'attack', cost:2, desc:'造成 <span class="hl">14</span> 点伤害。', baseDmg:14 },
+    { id:'bludgeon', name:'重击', type:'attack', cost:3, desc:'造成 <span class="hl">32</span> 点伤害。', baseDmg:32 },
+    { id:'immolate', name:'献祭之火', type:'attack', cost:2, desc:'造成 <span class="hl">22</span> 点伤害。', baseDmg:22 },
+    { id:'whirlwind_slash', name:'回旋劈斩', type:'attack', cost:2, desc:'造成 <span class="hl">6</span> 点伤害 <span class="hl">3</span> 次。', baseDmg:6, hits:3 },
+    { id:'rampage', name:'暴走', type:'attack', cost:1, desc:'造成 <span class="hl">7</span> 点伤害。', baseDmg:7 },
+    { id:'body_slam', name:'泰山压顶', type:'attack', cost:2, desc:'造成 <span class="hl">18</span> 点伤害。', baseDmg:18 },
+    { id:'blood_for_blood', name:'以血还血', type:'attack', cost:4, desc:'造成 <span class="hl">18</span> 点伤害。', baseDmg:18 },
+    { id:'disarm', name:'缴械', type:'skill', cost:1, desc:'获得 <span class="hl">12</span> 点格挡。', baseBlock:12 },
+    { id:'shockwave', name:'震荡波', type:'skill', cost:1, desc:'施加 <span class="hl">2</span> 层易伤和 <span class="hl">2</span> 层虚弱。', vuln:2, weak:2 },
+    { id:'intimidate', name:'威吓', type:'skill', cost:0, desc:'施加 <span class="hl">2</span> 层虚弱。', weak:2 },
+    { id:'battle_trance', name:'战斗专注', type:'skill', cost:0, desc:'抽 <span class="hl">4</span> 张牌。', draw:4 },
+    { id:'true_grit', name:'坚毅', type:'skill', cost:1, desc:'获得 <span class="hl">7</span> 点格挡。', baseBlock:7 },
+    { id:'impervious', name:'势不可挡', type:'skill', cost:2, desc:'获得 <span class="hl">24</span> 点格挡。', baseBlock:24 },
+    { id:'ghostly_armor', name:'幽灵护甲', type:'skill', cost:1, desc:'获得 <span class="hl">14</span> 点格挡。', baseBlock:14 },
+    { id:'warcry', name:'战吼', type:'skill', cost:0, desc:'抽 <span class="hl">2</span> 张牌。', draw:2 },
+    { id:'flex', name:'活动肌肉', type:'skill', cost:0, desc:'获得 <span class="hl">2</span> 点力量。', strength:2 },
+    { id:'limit_break_plus', name:'突破极限', type:'skill', cost:2, desc:'获得 <span class="hl">5</span> 点力量。', strength:5 },
+    { id:'metallicize', name:'金属化', type:'power', cost:1, desc:'获得 <span class="hl">4</span> 点格挡和 <span class="hl">1</span> 点力量。', baseBlock:4, strength:1 },
+    { id:'demon_form', name:'恶魔形态', type:'power', cost:3, desc:'获得 <span class="hl">4</span> 点力量和 <span class="hl">10</span> 点格挡。', strength:4, baseBlock:10 },
+    { id:'berserk_spirit', name:'狂暴之魂', type:'power', cost:1, desc:'获得 <span class="hl">3</span> 点力量。', strength:3 },
+    { id:'runic_barrier', name:'符文壁垒', type:'power', cost:2, desc:'获得 <span class="hl">16</span> 点格挡。', baseBlock:16 },
+    { id:'fire_breathing', name:'吐息', type:'power', cost:1, desc:'造成 <span class="hl">10</span> 点伤害，获得 <span class="hl">2</span> 点力量。', baseDmg:10, strength:2 },
+  ];
+
+  let currentLevel = 1;
+  let happyFlowerCounter = 0;
+
+  function generateEnemy(level) {
+    const isBoss = level % 10 === 0;
+    const isElite = level % 5 === 0 && !isBoss;
+    const tier = Math.ceil(level / 10);
+    const dmgBase = Math.floor(4 + level * 0.65);
+    const blockBase = Math.floor(4 + level * 0.5);
+    let hpMult = 1.0;
+    if (isBoss) hpMult = 2.5;
+    else if (isElite) hpMult = 1.6;
+    const maxHp = Math.floor((30 + level * 4.5) * hpMult);
+    const archetypes = ['attacker','brawler','debuffer'];
+    if (level >= 6) archetypes.push('multihit');
+    if (level >= 12) archetypes.push('heavy');
+    if (level >= 18) archetypes.push('buffer');
+    const arch = isBoss ? 'boss' : archetypes[Math.floor(Math.random() * archetypes.length)];
+    let pattern, phase2Pattern = null;
+    switch (arch) {
+      case 'attacker':
+        pattern = [
+          { type:'attack', value: dmgBase },
+          { type:'attack', value: dmgBase },
+          { type:'attack', value: Math.floor(dmgBase * 1.4) },
+        ];
+        break;
+      case 'brawler':
+        pattern = [
+          { type:'attack', value: dmgBase },
+          { type:'mixed', value: Math.floor(dmgBase * 0.8), block: blockBase },
+          { type:'defend', value: blockBase + Math.floor(level * 0.3) },
+        ];
+        break;
+      case 'debuffer':
+        pattern = [
+          { type:'attack', value: Math.floor(dmgBase * 0.8), vuln: level >= 8 ? 2 : 1 },
+          { type:'attack', value: dmgBase, weak: level >= 12 ? 2 : 1 },
+          { type:'attack', value: dmgBase },
+        ];
+        break;
+      case 'multihit': {
+        const hits = level >= 35 ? 4 : level >= 20 ? 3 : 2;
+        const hitDmg = Math.floor(2 + level * 0.25);
+        pattern = [
+          { type:'attack', value: hitDmg, hits },
+          { type:'attack', value: hitDmg, hits },
+          { type:'defend', value: blockBase },
+        ];
+        break;
+      }
+      case 'heavy':
+        pattern = [
+          { type:'defend', value: blockBase },
+          { type:'attack', value: Math.floor(dmgBase * 1.7) },
+          { type:'attack', value: Math.floor(dmgBase * 1.2) },
+        ];
+        break;
+      case 'buffer':
+        pattern = [
+          { type:'attack', value: dmgBase },
+          { type:'buff', value: Math.floor(1 + level * 0.08), buffType:'strength' },
+          { type:'attack', value: Math.floor(dmgBase * 1.1) },
+        ];
+        break;
+      case 'boss':
+        pattern = [
+          { type:'attack', value: dmgBase },
+          { type:'defend', value: blockBase + 5 },
+          { type:'attack', value: Math.floor(dmgBase * 1.5), vuln: level >= 20 ? 2 : 1 },
+          { type:'attack', value: Math.floor(dmgBase * 1.2) },
+        ];
+        phase2Pattern = [
+          { type:'attack', value: Math.floor(dmgBase * 1.2), hits: 2 },
+          { type:'attack', value: Math.floor(dmgBase * 1.8) },
+          { type:'defend', value: Math.floor(blockBase * 1.6) },
+          { type:'attack', value: Math.floor(dmgBase * 1.3), weak: 2, vuln: 1 },
+        ];
+        break;
+    }
+    const tierNames = [
+      [],
+      ['邪教徒','大颚虫','地精战士','暗影爬行者','哨兵'],
+      ['暗影刺客','火焰魔像','霜巨人','噬魂者','深渊卫士','血爪蝠'],
+      ['虚空行者','地狱骑士','混沌法师','远古石像','梦魇蛛','暗影猎手'],
+      ['灭世先锋','天启骑士','深渊领主','暗黑龙裔','血魔','末日先知'],
+      ['最终兵器','虚空神使','混沌之源','末日使者','灭世泰坦','虚空龙'],
+    ];
+    let name;
+    if (isBoss) {
+      const bossNames = ['守护者','青铜巨人','六面体','深渊之王','终焉之龙'];
+      name = bossNames[tier - 1];
+    } else if (isElite) {
+      const names = tierNames[tier];
+      name = '精英\u00b7' + names[Math.floor(Math.random() * names.length)];
+    } else {
+      const names = tierNames[tier];
+      name = names[Math.floor(Math.random() * names.length)];
+    }
+    const arts = tier <= 2 ? ['cultist','jawworm'] : tier <= 3 ? ['jawworm','champion'] : ['champion'];
+    const art = arts[Math.floor(Math.random() * arts.length)];
+    return { name, maxHp, art, pattern, phase2Pattern, level, isBoss, isElite };
+  }
+
+  function makeCard(def, uid) {
+    return {
+      uid: uid || (def.id + '_' + Math.random().toString(36).slice(2,6)),
+      id: def.id, name: def.name, type: def.type, cost: def.cost, desc: def.desc,
+      baseDmg: def.baseDmg || 0, baseBlock: def.baseBlock || 0,
+      vuln: def.vuln || 0, weak: def.weak || 0,
+      strength: def.strength || 0, energy: def.energy || 0,
+      draw: def.draw || 0, hits: def.hits || 1,
+    };
+  }
+
+  function buildStartingDeck() {
+    const deck = [];
+    for (let i = 0; i < 5; i++) deck.push(makeCard(CARD_DEFS.strike, 'strike_' + i));
+    for (let i = 0; i < 4; i++) deck.push(makeCard(CARD_DEFS.defend, 'defend_' + i));
+    deck.push(makeCard(CARD_DEFS.bash, 'bash_0'));
+    return deck;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  function deepClone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
+
+  function initGame() {
+    const enemyTmpl = generateEnemy(currentLevel);
+    G = {
+      player: {
+        hp: 70, maxHp: 70,
+        block: 0, strength: 0, energy: 3, maxEnergy: 3,
+        vulnerable: 0, weak: 0,
+      },
+      enemy: {
+        name: enemyTmpl.name,
+        hp: enemyTmpl.maxHp, maxHp: enemyTmpl.maxHp,
+        block: 0, strength: 0,
+        vulnerable: 0, weak: 0,
+        patternIdx: 0,
+        pattern: deepClone(enemyTmpl.pattern),
+        phase2Pattern: enemyTmpl.phase2Pattern ? deepClone(enemyTmpl.phase2Pattern) : null,
+        currentIntent: null,
+        art: enemyTmpl.art,
+        isBoss: enemyTmpl.isBoss, isElite: enemyTmpl.isElite,
+      },
+      deck: buildStartingDeck(),
+      hand: [],
+      drawPile: [],
+      discardPile: [],
+      potions: [],
+      relics: [],
+      turnPhase: 'player',
+      combatLogLines: [],
+    };
+    G.drawPile = [...G.deck];
+    shuffle(G.drawPile);
+    G.deck = [...G.drawPile];
+    turnCount = 0;
+    animLock = false;
+    happyFlowerCounter = 0;
+    // Apply relic passive bonuses for start of combat
+    applyRelicCombatStart();
+    setEnemyIntent();
+    startPlayerTurn();
+    renderAll();
+    drawEnemyArt();
+  }
+
+  function applyRelicCombatStart() {
+    if (hasRelic('lantern')) {
+      G.player.maxEnergy = 4;
+      G.player.energy = 4;
+    } else {
+      G.player.maxEnergy = 3;
+    }
+    if (hasRelic('anchor')) {
+      G.player.block = (G.player.block || 0) + 8;
+    }
+    if (hasRelic('vajra')) {
+      G.player.strength += 1;
+    }
+    if (hasRelic('smooth_stone')) {
+      G.player.strength += 1;
+    }
+  }
+
+  function setEnemyIntent() {
+    const e = G.enemy;
+    let pattern = e.pattern;
+    if (e.phase2Pattern && e.hp <= e.maxHp / 2) {
+      pattern = e.phase2Pattern;
+      if (e.patternIdx >= pattern.length) e.patternIdx = 0;
+    }
+    e.currentIntent = pattern[e.patternIdx];
+    e.patternIdx = (e.patternIdx + 1) % pattern.length;
+  }
+
+  function startPlayerTurn() {
+    turnCount++;
+    G.player.energy = G.player.maxEnergy;
+    G.player.block = 0;
+    G.turnPhase = 'player';
+    if (G.player.vulnerable > 0) G.player.vulnerable--;
+    if (G.player.weak > 0) G.player.weak--;
+    // Happy Flower relic
+    if (hasRelic('happy_flower')) {
+      happyFlowerCounter++;
+      if (happyFlowerCounter >= 3) {
+        happyFlowerCounter = 0;
+        G.player.energy += 1;
+        addLog('快乐之花：获得 1 点能量。');
+      }
+    }
+    // Bag of Preparation: draw extra card
+    const drawCount = hasRelic('bag_of_prep') ? 6 : 5;
+    drawCards(drawCount);
+    endTurnBtn.disabled = false;
+    renderAll();
+  }
+
+  function drawCards(n) {
+    for (let i = 0; i < n; i++) {
+      if (G.drawPile.length === 0) {
+        if (G.discardPile.length === 0) break;
+        G.drawPile = [...G.discardPile];
+        G.discardPile = [];
+        shuffle(G.drawPile);
+        addLog('弃牌堆已洗入抽牌堆。');
+      }
+      if (G.drawPile.length > 0) {
+        G.hand.push(G.drawPile.pop());
+      }
+    }
+  }
+
+  function playCard(card, idx) {
+    if (G.turnPhase !== 'player') return;
+    if (G.player.energy < card.cost) {
+      shakeElement(endTurnBtn);
+      return;
+    }
+    if (animLock) return;
+    animLock = true;
+
+    G.hand.splice(idx, 1);
+    G.player.energy -= card.cost;
+    G.discardPile.push(card);
+
+    const cardEls = handArea.querySelectorAll('.card');
+    let cardEl = null;
+    cardEls.forEach(el => {
+      if (el.dataset.uid === card.uid && !el.classList.contains('played')) {
+        cardEl = el;
+      }
+    });
+
+    const perHitDmg = card.baseDmg + (card.type === 'attack' ? G.player.strength + getRelicExtraStr() : 0);
+    const hits = card.hits || 1;
+    const block = card.baseBlock;
+
+    if (card.type === 'attack' && perHitDmg > 0) spawnCardProjectile(cardEl);
+    if (card.type === 'skill' && block > 0) spawnShieldRings();
+    if (card.type === 'power' || card.strength > 0) {
+      spawnPowerRunes();
+      screenFlash('power');
+    }
+
+    if (cardEl) cardEl.classList.add('played');
+
+    if (block > 0) {
+      G.player.block += block;
+      spawnFText('+' + block, gameEl.offsetWidth / 2, gameEl.offsetHeight - 210, '#5dade2', '16px');
+    }
+    if (card.strength > 0) {
+      G.player.strength += card.strength;
+      spawnFText('+' + card.strength + ' 力量', gameEl.offsetWidth / 2, gameEl.offsetHeight - 230, '#e74c3c', '18px');
+    }
+    if (card.energy > 0) {
+      G.player.energy = Math.min(G.player.energy + card.energy, G.player.maxEnergy + 2);
+      spawnFText('+' + card.energy + ' ⚡', gameEl.offsetWidth / 2, gameEl.offsetHeight - 210, '#f1c40f', '18px');
+    }
+
+    let logExtra = '';
+    if (card.vuln > 0) logExtra += '，' + card.vuln + ' 层易伤';
+    if (card.weak > 0) logExtra += '，' + card.weak + ' 层虚弱';
+    const totalDmg = perHitDmg * hits;
+    const dmgText = totalDmg > 0 ? '，造成 ' + totalDmg + ' 点伤害' : '';
+    const blockText = block > 0 ? '，获得 ' + block + ' 点格挡' : '';
+    addLog('打出 ' + card.name + dmgText + blockText + logExtra + '。');
+
+    if (card.draw > 0) drawCards(card.draw);
+
+    if (perHitDmg > 0) {
+      let hitIdx = 0;
+      function doHit() {
+        if (hitIdx >= hits) {
+          animLock = false;
+          renderAll();
+          if (G.enemy.hp <= 0) {
+            G.enemy.hp = 0;
+            renderAll();
+            setTimeout(function() { onEnemyDefeated(); }, 700);
+          }
+          return;
+        }
+        dealDamageToEnemy(perHitDmg, hitIdx === 0 ? card.vuln : 0, hitIdx === 0 ? card.weak : 0);
+        hitIdx++;
+        if (hitIdx < hits) {
+          setTimeout(doHit, 130);
+        } else {
+          doHit();
+        }
+      }
+      doHit();
+    } else {
+      animLock = false;
+      renderAll();
+      if (G.enemy.hp <= 0) {
+        G.enemy.hp = 0;
+        renderAll();
+        setTimeout(function() { onEnemyDefeated(); }, 700);
+      }
+    }
+
+    setTimeout(function() {
+      var playedCards = handArea.querySelectorAll('.card.played');
+      playedCards.forEach(function(el) { el.remove(); });
+    }, 500);
+  }
+
+  function dealDamageToEnemy(rawDmg, applyVuln, applyWeak) {
+    let dmg = rawDmg;
+    if (applyVuln > 0) {
+      G.enemy.vulnerable = (G.enemy.vulnerable || 0) + applyVuln;
+    }
+    if (applyWeak > 0) {
+      G.enemy.weak = (G.enemy.weak || 0) + applyWeak;
+    }
+    if (G.player.weak > 0) {
+      dmg = Math.floor(dmg * 0.75);
+    }
+    if (G.enemy.vulnerable > 0) {
+      dmg = Math.floor(dmg * 1.5);
+      G.enemy.vulnerable--;
+    }
+    if (G.enemy.block > 0) {
+      var blocked = Math.min(G.enemy.block, dmg);
+      G.enemy.block -= blocked;
+      dmg -= blocked;
+      if (blocked > 0) {
+        spawnFText(blocked + ' 格挡', gameEl.offsetWidth / 2, 140, '#5dade2', '14px');
+        spawnBlockShatter(gameEl.offsetWidth / 2, 130);
+      }
+    }
+    if (dmg > 0) {
+      G.enemy.hp -= dmg;
+      spawnFText('-' + dmg, gameEl.offsetWidth / 2, 120, '#e74c3c', '24px');
+      shakeElement(enemySprite);
+      screenFlash(dmg >= 15 ? 'heavy' : 'hit');
+    }
+    if (rawDmg > 0) {
+      enemyHitFlash();
+    }
+  }
+
+  function getRelicExtraStr() {
+    let extra = 0;
+    if (hasRelic('red_skull') && G.player.hp <= G.player.maxHp / 2) {
+      extra += 2;
+    }
+    return extra;
+  }
+
+  function executeEnemyTurn() {
+    G.turnPhase = 'enemy';
+    endTurnBtn.disabled = true;
+    const e = G.enemy;
+    const intent = e.currentIntent;
+
+    if (e.vulnerable > 0) e.vulnerable--;
+
+    let totalDmg = 0;
+    let blockGain = 0;
+    let applyVuln = 0;
+    let applyWeak = 0;
+    let buffStr = 0;
+
+    switch (intent.type) {
+      case 'attack':
+        totalDmg = intent.value + e.strength;
+        if (intent.hits) totalDmg *= intent.hits;
+        applyVuln = intent.vuln || 0;
+        applyWeak = intent.weak || 0;
+        break;
+      case 'defend':
+        blockGain = intent.value;
+        break;
+      case 'buff':
+        buffStr = intent.value;
+        break;
+      case 'mixed':
+        totalDmg = intent.value + e.strength;
+        blockGain = intent.block || 0;
+        break;
+    }
+
+    if (e.weak > 0 && totalDmg > 0) {
+      totalDmg = Math.floor(totalDmg * 0.75);
+      e.weak--;
+    }
+
+    if (blockGain > 0) {
+      e.block += blockGain;
+      spawnFText('+' + blockGain + ' 🛡️', gameEl.offsetWidth / 2, 140, '#5dade2', '16px');
+    }
+
+    let actualPlayerDmg = 0;
+
+    if (totalDmg > 0) {
+      let dmg = totalDmg;
+      if (G.player.vulnerable > 0) {
+        dmg = Math.floor(dmg * 1.5);
+      }
+      // Data Disk ghost relic: first hit half damage
+      if (hasRelic('data_disk') && dmg > 3) {
+        dmg = Math.floor(dmg / 2);
+        G.relics = G.relics.filter(r => r.id !== 'data_disk'); // remove after use
+        addLog('幽魂面具：伤害减半！');
+      }
+      if (G.player.block > 0) {
+        const blocked = Math.min(G.player.block, dmg);
+        G.player.block -= blocked;
+        dmg -= blocked;
+      }
+      if (dmg > 0) {
+        G.player.hp -= dmg;
+        actualPlayerDmg = dmg;
+        spawnFText('-' + dmg, gameEl.offsetWidth / 2, gameEl.offsetHeight - 200, '#e74c3c', '24px');
+        screenFlash(dmg >= 15 ? 'heavy' : 'hit');
+      }
+      if (applyVuln > 0) {
+        G.player.vulnerable = (G.player.vulnerable || 0) + applyVuln;
+        addLog(`敌人施加了 ${applyVuln} 层易伤。`);
+      }
+      if (applyWeak > 0) {
+        G.player.weak = (G.player.weak || 0) + applyWeak;
+        addLog(`敌人施加了 ${applyWeak} 层虚弱。`);
+      }
+      addLog(`敌人使用 ${intent.type === 'mixed' ? '攻击+格挡' : intent.type === 'attack' ? '攻击' : intent.type === 'defend' ? '防御' : '增益'}${totalDmg > 0 ? '，造成 ' + totalDmg + ' 点伤害' : ''}。`);
+    } else if (buffStr > 0) {
+      e.strength += buffStr;
+      spawnFText('+' + buffStr + ' 力量', gameEl.offsetWidth / 2, 100, '#f39c12', '20px');
+      addLog(`敌人获得了 ${buffStr} 点力量。`);
+    } else if (blockGain > 0 && totalDmg === 0) {
+      addLog(`敌人获得了 ${blockGain} 点格挡。`);
+    }
+
+    // Bronze Scales: reflect damage
+    if (hasRelic('bronze_scales') && actualPlayerDmg > 0) {
+      G.enemy.hp -= 3;
+      addLog('青铜鳞甲：反弹 3 点伤害。');
+      spawnFText('-3 反弹', gameEl.offsetWidth / 2, 110, '#e74c3c', '14px');
+    }
+
+    renderAll();
+
+    if (G.player.hp <= 0) {
+      G.player.hp = 0;
+      renderAll();
+      setTimeout(() => gameOver(), 800);
+      return;
+    }
+
+    setTimeout(() => {
+      setEnemyIntent();
+      startPlayerTurn();
+      renderAll();
+    }, 500);
+  }
+
+  function endTurn() {
+    if (G.turnPhase !== 'player' || animLock) return;
+    G.turnPhase = 'animating';
+    endTurnBtn.disabled = true;
+
+    G.discardPile.push(...G.hand);
+    G.hand = [];
+
+    renderAll();
+    setTimeout(() => executeEnemyTurn(), 300);
+  }
+
+  function onEnemyDefeated() {
+    G.turnPhase = 'animating';
+    endTurnBtn.disabled = true;
+    createDeathBurst();
+    addLog(`${G.enemy.name} 被击败！`);
+
+    // Burning Blood relic: heal
+    if (hasRelic('burning_blood')) {
+      G.player.hp = Math.min(G.player.hp + 6, G.player.maxHp);
+      addLog('燃烧之血：恢复了 6 点生命。');
+    }
+
+    const healAmt = Math.floor(G.player.maxHp * 0.3);
+    G.player.hp = Math.min(G.player.hp + healAmt, G.player.maxHp);
+    addLog(`恢复了 ${healAmt} 点生命。`);
+
+    currentLevel++;
+
+    // Determine what rewards to give
+    if (currentLevel > 50) {
+      setTimeout(() => showVictory(), 1200);
+      return;
+    }
+
+    // Boss reward: relic + card
+    if (currentLevel % 10 === 1 && currentLevel > 1) {
+      setTimeout(() => showRelicReward(true), 1000);
+    } else if (currentLevel % 5 === 1 && currentLevel > 5 && Math.random() < 0.4) {
+      // Elite relic chance (40%)
+      setTimeout(() => showRelicReward(false), 1000);
+    } else if (Math.random() < 0.3 && G.potions.length < 2) {
+      // Random potion drop (30%)
+      setTimeout(() => showPotionReward(), 1000);
+    } else {
+      setTimeout(() => showCardReward(), 1000);
+    }
+  }
+
+  function showRelicReward(isBoss) {
+    removeOverlays();
+    G.turnPhase = 'animating';
+    endTurnBtn.disabled = true;
+
+    const pool = isBoss
+      ? BOSS_RELIC_IDS.filter(id => !hasRelic(id))
+      : ELITE_RELIC_IDS.filter(id => !hasRelic(id));
+
+    if (pool.length === 0) {
+      showCardReward();
+      return;
+    }
+
+    // Pick 1 random relic + 2 cards
+    shuffle(pool);
+    const relicId = pool[0];
+
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    overlay.innerHTML = `
+      <h3>${isBoss ? 'BOSS' : '精英'} 遗物 — 第 ${currentLevel} 层</h3>
+      <div id="relic-reward-overlay">
+        <div class="relic-reward-box" id="relic-pick">
+          <div class="relic-reward-icon">${RELIC_DEFS[relicId].emoji}</div>
+          <div class="relic-reward-name">${RELIC_DEFS[relicId].name}</div>
+          <div class="relic-reward-desc">${RELIC_DEFS[relicId].desc}</div>
+        </div>
+      </div>
+      <button class="btn" id="skip-relic-btn">跳过（直接选牌）</button>
+    `;
+    gameEl.appendChild(overlay);
+
+    overlay.querySelector('#relic-pick').addEventListener('click', () => {
+      addRelic(relicId);
+      addLog(`获得遗物：${RELIC_DEFS[relicId].name}`);
+      removeOverlays();
+      showCardReward();
+    });
+    overlay.querySelector('#skip-relic-btn').addEventListener('click', () => {
+      removeOverlays();
+      showCardReward();
+    });
+  }
+
+  function showPotionReward() {
+    removeOverlays();
+    G.turnPhase = 'animating';
+    endTurnBtn.disabled = true;
+
+    // Pick 3 random potions
+    const allPotions = Object.keys(POTION_DEFS);
+    shuffle(allPotions);
+    const choices = allPotions.slice(0, 3);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    overlay.id = 'potion-reward-overlay';
+    overlay.innerHTML = '<h3>第 ' + currentLevel + ' 层 — 选择一瓶药水</h3>';
+
+    choices.forEach(id => {
+      const d = POTION_DEFS[id];
+      const box = document.createElement('div');
+      box.className = 'potion-reward-box';
+      box.innerHTML = `
+        <div class="potion-reward-icon">${d.emoji}</div>
+        <div class="potion-reward-name">${d.name}</div>
+        <div class="potion-reward-desc">${d.desc}</div>
+        <div style="font-size:10px;color:#888;margin-top:4px">${d.rarity === 'rare' ? '稀有' : '普通'}</div>
+      `;
+      box.addEventListener('click', () => {
+        if (G.potions.length >= 2) {
+          // Replace the first potion
+          G.potions.shift();
+        }
+        G.potions.push(Object.assign({}, d));
+        addLog(`获得药水：${d.name}`);
+        removeOverlays();
+        advanceToNextFight();
+      });
+      overlay.appendChild(box);
+    });
+
+    const skip = document.createElement('div');
+    skip.id = 'skip-reward';
+    skip.textContent = '跳过（不选药水）';
+    skip.addEventListener('click', () => {
+      removeOverlays();
+      advanceToNextFight();
+    });
+    overlay.appendChild(skip);
+
+    gameEl.appendChild(overlay);
+  }
+
+  function showCardReward() {
+    removeOverlays();
+    G.turnPhase = 'animating';
+    endTurnBtn.disabled = true;
+
+    const pool = [...REWARD_POOL];
+    shuffle(pool);
+    const choices = pool.slice(0, 3);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    overlay.id = 'card-reward';
+    overlay.innerHTML = '<h3>第 ' + currentLevel + ' 层 — 选择一张卡牌加入牌组</h3>';
+
+    choices.forEach(def => {
+      const card = document.createElement('div');
+      card.className = `reward-card ${def.type}`;
+      card.innerHTML = `
+        <div class="card-cost">${def.cost}</div>
+        <div class="card-name">${def.name}</div>
+        <div class="card-type-label" style="font-size:10px;color:${def.type==='attack'?'#a02020':def.type==='skill'?'#1a5a88':'#7b3d9e'}">${def.type==='attack' ? '攻击' : def.type==='skill' ? '技能' : '能力'}</div>
+        <div class="card-desc" style="margin-top:6px">${def.desc}</div>
+      `;
+      card.addEventListener('click', () => {
+        const newCard = makeCard(def);
+        G.deck.push(newCard);
+        G.discardPile.push(newCard);
+        addLog(`已将 ${def.name} 加入牌组。`);
+        removeOverlays();
+        advanceToNextFight();
+      });
+      overlay.appendChild(card);
+    });
+
+    const skip = document.createElement('div');
+    skip.id = 'skip-reward';
+    skip.textContent = '跳过（不选牌）';
+    skip.addEventListener('click', () => {
+      removeOverlays();
+      advanceToNextFight();
+    });
+    overlay.appendChild(skip);
+
+    gameEl.appendChild(overlay);
+  }
+
+  function advanceToNextFight() {
+    const enemyTmpl = generateEnemy(currentLevel);
+    G.enemy = {
+      name: enemyTmpl.name,
+      hp: enemyTmpl.maxHp, maxHp: enemyTmpl.maxHp,
+      block: 0, strength: 0,
+      vulnerable: 0, weak: 0,
+      patternIdx: 0,
+      pattern: deepClone(enemyTmpl.pattern),
+      phase2Pattern: enemyTmpl.phase2Pattern ? deepClone(enemyTmpl.phase2Pattern) : null,
+      currentIntent: null,
+      art: enemyTmpl.art,
+      isBoss: enemyTmpl.isBoss, isElite: enemyTmpl.isElite,
+    };
+    G.player.block = 0;
+    G.player.strength = 0;
+    G.player.vulnerable = 0;
+    G.player.weak = 0;
+    G.hand = [];
+    G.drawPile = [...G.deck];
+    shuffle(G.drawPile);
+    G.discardPile = [];
+    G.combatLogLines = [];
+    turnCount = 0;
+    animLock = false;
+    happyFlowerCounter = 0;
+    // Re-apply relic combat start bonuses
+    G.player.maxEnergy = hasRelic('lantern') ? 4 : 3;
+    applyRelicCombatStart();
+    setEnemyIntent();
+    startPlayerTurn();
+    drawEnemyArt();
+    if (enemyTmpl.isBoss) {
+      enemySprite.classList.add('boss-entrance');
+      gameEl.classList.add('shake-boss');
+      screenOverlay.classList.add('flash-boss');
+      setTimeout(function() {
+        enemySprite.classList.remove('boss-entrance');
+        gameEl.classList.remove('shake-boss');
+        screenOverlay.classList.remove('flash-boss');
+      }, 1000);
+    }
+    renderAll();
+  }
+
+  function showVictory() {
+    removeOverlays();
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    overlay.innerHTML = `
+      <h2>胜 利</h2>
+      <h3>深渊已被征服</h3>
+      <div id="victory-stats">
+        已通关层数：${currentLevel - 1} / 50<br>
+        卡组卡牌数：${G.deck.length}<br>
+        遗物数：${G.relics.length}<br>
+        剩余生命：${G.player.hp}/${G.player.maxHp}
+      </div>
+      <button class="btn" id="restart-btn">再来一局</button>
+    `;
+    gameEl.appendChild(overlay);
+    overlay.querySelector('#restart-btn').addEventListener('click', () => {
+      removeOverlays();
+      currentLevel = 1;
+      initGame();
+    });
+  }
+
+  function gameOver() {
+    removeOverlays();
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    overlay.innerHTML = `
+      <h2 style="color:#e74c3c">战 败</h2>
+      <h3>深渊吞噬了又一个灵魂</h3>
+      <div id="victory-stats">
+        被击败于：${G.enemy.name}<br>
+        已通关层数：${currentLevel - 1} / 50
+      </div>
+      <button class="btn" id="restart-btn">重新挑战</button>
+    `;
+    gameEl.appendChild(overlay);
+    overlay.querySelector('#restart-btn').addEventListener('click', () => {
+      removeOverlays();
+      currentLevel = 1;
+      initGame();
+    });
+  }
+
+  function removeOverlays() {
+    gameEl.querySelectorAll('.overlay').forEach(el => el.remove());
+  }
+
+  function addLog(msg) {
+    G.combatLogLines.push(msg);
+    if (G.combatLogLines.length > 5) G.combatLogLines.shift();
+    combatLog.innerHTML = G.combatLogLines.map(l => '> ' + l).join('<br>');
+  }
+
+  function spawnFText(text, x, y, color, size) {
+    const el = document.createElement('div');
+    el.className = 'ftext';
+    el.textContent = text;
+    el.style.cssText = `left:${x}px;top:${y}px;color:${color};font-size:${size || '20px'};`;
+    gameEl.appendChild(el);
+    setTimeout(() => el.remove(), 1100);
+  }
+
+  function shakeElement(el) {
+    el.classList.remove('shake');
+    void el.offsetWidth;
+    el.classList.add('shake');
+  }
+
+  function screenFlash(type) {
+    var cls = type === 'heavy' ? 'flash-boss' : type === 'power' ? 'flash-power' : 'flash-hit';
+    screenOverlay.classList.add(cls);
+    setTimeout(function() { screenOverlay.classList.remove(cls); }, type === 'heavy' ? 180 : 100);
+  }
+
+  function enemyHitFlash() {
+    enemySprite.classList.add('hit-flash');
+    setTimeout(function() { enemySprite.classList.remove('hit-flash'); }, 80);
+  }
+
+  function spawnCardProjectile(cardEl) {
+    if (!cardEl) return;
+    var rect = cardEl.getBoundingClientRect();
+    var gameRect = gameEl.getBoundingClientRect();
+    var startX = rect.left + rect.width / 2 - gameRect.left;
+    var startY = rect.top + rect.height / 2 - gameRect.top;
+    var endX = gameEl.offsetWidth / 2;
+    var endY = 100;
+    var proj = document.createElement('div');
+    proj.className = 'card-projectile';
+    proj.style.left = startX + 'px';
+    proj.style.top = startY + 'px';
+    gameEl.appendChild(proj);
+    requestAnimationFrame(function() {
+      proj.style.transition = 'left 0.35s ease-in, top 0.35s ease-in, opacity 0.35s';
+      proj.style.left = endX + 'px';
+      proj.style.top = endY + 'px';
+      proj.style.opacity = '0';
+    });
+    setTimeout(function() { proj.remove(); }, 400);
+  }
+
+  function spawnShieldRings() {
+    var px = gameEl.offsetWidth / 2;
+    var py = gameEl.offsetHeight - 210;
+    for (var i = 0; i < 3; i++) {
+      setTimeout(function() {
+        var ring = document.createElement('div');
+        ring.className = 'shield-ring';
+        ring.style.left = px + 'px';
+        ring.style.top = py + 'px';
+        gameEl.appendChild(ring);
+        setTimeout(function() { ring.remove(); }, 700);
+      }, i * 100);
+    }
+  }
+
+  function spawnPowerRunes() {
+    var runes = ['\u2726', '\u2739', '\u2735', '\u2748'];
+    var px = gameEl.offsetWidth / 2;
+    var py = gameEl.offsetHeight - 230;
+    for (var i = 0; i < 5; i++) {
+      setTimeout(function() {
+        var rune = document.createElement('div');
+        rune.className = 'power-rune';
+        rune.textContent = runes[Math.floor(Math.random() * runes.length)];
+        rune.style.left = (px - 40 + Math.random() * 80) + 'px';
+        rune.style.top = (py + Math.random() * 20) + 'px';
+        rune.style.animationDuration = (0.8 + Math.random() * 0.6) + 's';
+        gameEl.appendChild(rune);
+        setTimeout(function() { rune.remove(); }, 1400);
+      }, i * 80);
+    }
+  }
+
+  function spawnBlockShatter(cx, cy) {
+    for (var i = 0; i < 10; i++) {
+      var p = document.createElement('div');
+      p.className = 'block-shatter';
+      p.style.left = cx + 'px';
+      p.style.top = cy + 'px';
+      p.style.setProperty('--sx', (Math.random() * 80 - 40) + 'px');
+      p.style.setProperty('--sy', (Math.random() * 60 - 50) + 'px');
+      p.style.animationDuration = (0.4 + Math.random() * 0.4) + 's';
+      gameEl.appendChild(p);
+      setTimeout(function() { p.remove(); }, 700);
+    }
+  }
+
+  function createDeathBurst() {
+    var cx = gameEl.offsetWidth / 2;
+    var cy = 120;
+    var colors = ['#e74c3c','#c0392b','#ff6b6b','#ff4444','#ff0','#fff'];
+    for (var i = 0; i < 20; i++) {
+      var angle = Math.random() * Math.PI * 2;
+      var dist = 40 + Math.random() * 80;
+      var p = document.createElement('div');
+      p.className = 'death-particle';
+      p.style.left = cx + 'px';
+      p.style.top = cy + 'px';
+      p.style.width = p.style.height = (4 + Math.random() * 10) + 'px';
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+      p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+      p.style.animationDuration = (0.6 + Math.random() * 0.6) + 's';
+      gameEl.appendChild(p);
+      setTimeout(function() { p.remove(); }, 1200);
+    }
+    var gameElRef = gameEl;
+    gameElRef.classList.add('shake-boss');
+    setTimeout(function() { gameElRef.classList.remove('shake-boss'); }, 600);
+  }
+
+  function drawEnemyArt() {
+    const art = G.enemy.art;
+    enemySprite.innerHTML = '';
+    const s = enemySprite.style;
+    s.background = 'transparent';
+    s.borderRadius = '0';
+    s.width = '100px';
+    s.height = '120px';
+
+    if (art === 'cultist') {
+      enemySprite.innerHTML = `
+        <div style="position:relative;width:100%;height:100%">
+          <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:60px;height:70px;background:linear-gradient(180deg,#6c3483,#4a235a);border-radius:30% 30% 0 0;"></div>
+          <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);width:36px;height:36px;background:#7d5ba6;border-radius:50%;"></div>
+          <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);width:16px;height:20px;background:#3d2a54;border-radius:0 0 50% 50%;"></div>
+          <div style="position:absolute;top:22px;left:36px;width:5px;height:5px;background:#ff4444;border-radius:50%;box-shadow:0 0 6px #f00;"></div>
+          <div style="position:absolute;top:22px;left:58px;width:5px;height:5px;background:#ff4444;border-radius:50%;box-shadow:0 0 6px #f00;"></div>
+        </div>
+      `;
+    } else if (art === 'jawworm') {
+      enemySprite.innerHTML = `
+        <div style="position:relative;width:100%;height:100%">
+          <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);width:80px;height:50px;background:linear-gradient(180deg,#6b8e23,#4a6b15);border-radius:40%;"></div>
+          <div style="position:absolute;bottom:25px;left:50%;transform:translateX(-50%);width:70px;height:35px;background:#7a9f28;border-radius:35%;"></div>
+          <div style="position:absolute;bottom:45px;left:50%;transform:translateX(-50%);width:55px;height:30px;background:#8cb832;border-radius:35%;"></div>
+          <div style="position:absolute;bottom:58px;left:50%;transform:translateX(-50%);width:40px;height:28px;background:#9cc83a;border-radius:50%;"></div>
+          <div style="position:absolute;bottom:65px;left:34px;width:7px;height:10px;background:#fff;border-radius:50%;transform:rotate(-10deg);box-shadow:0 0 8px #ff0;"></div>
+          <div style="position:absolute;bottom:65px;left:56px;width:7px;height:10px;background:#fff;border-radius:50%;transform:rotate(10deg);box-shadow:0 0 8px #ff0;"></div>
+        </div>
+      `;
+    } else if (art === 'champion') {
+      enemySprite.innerHTML = `
+        <div style="position:relative;width:100%;height:100%">
+          <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:70px;height:80px;background:linear-gradient(180deg,#7a6b3a,#4a3d1a);border-radius:0 0 5px 5px;"></div>
+          <div style="position:absolute;bottom:40px;left:50%;transform:translateX(-50%);width:50px;height:45px;background:linear-gradient(180deg,#9a8b4a,#6a5b2a);border-radius:40%;"></div>
+          <div style="position:absolute;top:5px;left:50%;transform:translateX(-50%);width:40px;height:40px;background:#8b7332;border-radius:50%;border:3px solid #c9a81a;"></div>
+          <div style="position:absolute;top:11px;left:34px;width:6px;height:6px;background:#ff0;border-radius:50%;box-shadow:0 0 10px #fc0;"></div>
+          <div style="position:absolute;top:11px;left:58px;width:6px;height:6px;background:#ff0;border-radius:50%;box-shadow:0 0 10px #fc0;"></div>
+          <div style="position:absolute;top:22px;left:50%;transform:translateX(-50%);width:12px;height:6px;background:#4a3d1a;border-radius:0 0 50% 50%;"></div>
+          <div style="position:absolute;bottom:15px;left:20px;width:25px;height:35px;background:#5a4d2a;border-radius:30%;"></div>
+          <div style="position:absolute;bottom:15px;left:55px;width:25px;height:35px;background:#5a4d2a;border-radius:30%;"></div>
+        </div>
+      `;
+    }
+  }
+
+  function renderAll() {
+    renderPlayer();
+    renderEnemy();
+    renderHand();
+    renderDeckInfo();
+    renderPotions();
+    renderRelics();
+    turnIndicator.textContent = '第 ' + turnCount + ' 回合';
+    let levelText = '第 ' + currentLevel + ' / 50 层';
+    if (G.enemy.isBoss) levelText += ' [BOSS]';
+    else if (G.enemy.isElite) levelText += ' [精英]';
+    levelIndicator.textContent = levelText;
+  }
+
+  function renderPlayer() {
+    const p = G.player;
+    const hpPct = Math.max(0, (p.hp / p.maxHp) * 100);
+    playerHpInner.style.width = hpPct + '%';
+    playerHpInner.style.background = hpPct > 30
+      ? 'linear-gradient(90deg, #27ae60, #2ecc71 50%, #58d68d)'
+      : 'linear-gradient(90deg, #a02020, #e74c3c 50%, #f06050)';
+    playerHpText.textContent = `${p.hp}/${p.maxHp}`;
+    energyVal.textContent = `${p.energy}/${p.maxEnergy}`;
+
+    if (p.block > 0) {
+      blockStat.style.display = 'flex';
+      blockVal.textContent = p.block;
+    } else {
+      blockStat.style.display = 'none';
+    }
+
+    // Red Skull + regular strength
+    const displayStr = p.strength + getRelicExtraStr();
+    if (p.strength > 0 || displayStr > 0) {
+      strStat.style.display = 'flex';
+      strVal.textContent = p.strength;
+      if (getRelicExtraStr() > 0 && displayStr !== p.strength) {
+        strVal.textContent = displayStr + ' (' + p.strength + '+' + getRelicExtraStr() + ')';
+      }
+      var auraEl = $('player-aura');
+      auraEl.style.display = 'block';
+      auraEl.className = 'player-aura';
+    } else {
+      strStat.style.display = 'none';
+      var auraEl = $('player-aura');
+      auraEl.style.display = 'none';
+    }
+
+    const psEl = $('player-status');
+    let psHTML = '';
+    if (p.vulnerable > 0) psHTML += `<span class="status-tag vuln">易伤 ${p.vulnerable}</span>`;
+    if (p.weak > 0) psHTML += `<span class="status-tag weak">虚弱 ${p.weak}</span>`;
+    psEl.innerHTML = psHTML;
+  }
+
+  function renderEnemy() {
+    const e = G.enemy;
+    const hpPct = Math.max(0, (e.hp / e.maxHp) * 100);
+    enemyHpInner.style.width = hpPct + '%';
+    enemyHpInner.style.background = hpPct > 30
+      ? 'linear-gradient(90deg, #a02020, #e74c3c 50%, #f06050)'
+      : 'linear-gradient(90deg, #701010, #a02020 50%, #c0392b)';
+    enemyHpText.textContent = `${e.hp}/${e.maxHp}`;
+    enemyNameEl.textContent = e.name;
+
+    if (e.block > 0) {
+      enemyBlockEl.textContent = `🛡️ ${e.block}`;
+    } else {
+      enemyBlockEl.textContent = '';
+    }
+
+    const intent = e.currentIntent;
+    if (intent) {
+      let icon = '', txt = '';
+      switch (intent.type) {
+        case 'attack':
+          icon = '⚔️';
+          txt = `${intent.value + e.strength}`;
+          if (intent.hits) txt += `×${intent.hits}`;
+          if (intent.vuln) txt += ` +易伤`;
+          if (intent.weak) txt += ` +虚弱`;
+          break;
+        case 'defend':
+          icon = '🛡️';
+          txt = `+${intent.value}`;
+          break;
+        case 'buff':
+          icon = '⬆️';
+          txt = `+${intent.value} 力量`;
+          break;
+        case 'mixed':
+          icon = '⚔️🛡️';
+          txt = `${intent.value + e.strength} / +${intent.block}`;
+          break;
+      }
+      enemyIntentEl.innerHTML = `<span class="icon">${icon}</span> ${txt}`;
+    }
+
+    let statusHTML = '';
+    if (e.vulnerable > 0) statusHTML += `<span class="status-tag vuln">易伤 ${e.vulnerable}</span>`;
+    if (e.weak > 0) statusHTML += `<span class="status-tag weak">虚弱 ${e.weak}</span>`;
+    if (e.strength > 0) statusHTML += `<span style="color:#f06050;font-size:11px;text-shadow:0 0 6px rgba(240,96,80,0.4)"> 💪${e.strength}</span>`;
+    enemyStatusEl.innerHTML = statusHTML;
+  }
+
+  function renderHand() {
+    const existing = handArea.querySelectorAll('.card:not(.played)');
+    existing.forEach(el => el.remove());
+
+    G.hand.forEach((card, idx) => {
+      const el = document.createElement('div');
+      el.className = `card ${card.type}`;
+      el.dataset.uid = card.uid;
+      el.dataset.idx = idx;
+
+      if (G.player.energy < card.cost) {
+        el.classList.add('unplayable');
+      }
+
+      let typeLabel = card.type === 'attack' ? '攻击' : card.type === 'skill' ? '技能' : '能力';
+      el.innerHTML = `
+        <div class="card-cost">${card.cost}</div>
+        <div class="card-name">${card.name}</div>
+        <div class="card-type-label">${typeLabel}</div>
+        <div class="card-art"></div>
+        <div class="card-desc">${card.desc}</div>
+      `;
+
+      el.addEventListener('click', () => {
+        if (G.turnPhase === 'player' && G.player.energy >= card.cost) {
+          const actualIdx = G.hand.findIndex(c => c.uid === card.uid);
+          if (actualIdx >= 0) {
+            playCard(card, actualIdx);
+          }
+        }
+      });
+
+      handArea.appendChild(el);
+    });
+  }
+
+  function renderDeckInfo() {
+    deckInfo.innerHTML = `📄 抽牌堆: ${G.drawPile.length} &nbsp; 🔥 弃牌堆: ${G.discardPile.length}`;
+  }
+
+  function renderPotions() {
+    potionArea.innerHTML = '';
+    for (let i = 0; i < 2; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'potion-slot';
+      if (i < G.potions.length) {
+        const p = G.potions[i];
+        slot.innerHTML = `
+          <span class="potion-icon">${p.emoji}</span>
+          <div class="potion-tooltip"><b>${p.name}</b><br>${p.desc}<br><span style="font-size:9px;color:#888">点击使用</span></div>
+        `;
+        slot.addEventListener('click', () => usePotion(p, i));
+      } else {
+        slot.classList.add('empty');
+        slot.innerHTML = '<span style="color:#555;font-size:12px">空</span>';
+      }
+      potionArea.appendChild(slot);
+    }
+  }
+
+  function renderRelics() {
+    relicArea.innerHTML = '';
+    G.relics.forEach(relic => {
+      const icon = document.createElement('div');
+      icon.className = 'relic-icon';
+      icon.innerHTML = `
+        <span class="relic-emoji">${relic.emoji}</span>
+        <div class="relic-tooltip"><b>${relic.name}</b><br>${relic.desc}</div>
+      `;
+      relicArea.appendChild(icon);
+    });
+  }
+
+  // ============ Deck Viewer ============
+  function openDeckViewer() {
+    deckViewerGrid.innerHTML = '';
+    const sorted = [...G.deck].sort((a,b) => {
+      const t = { attack:0, skill:1, power:2 };
+      return (t[a.type]||0) - (t[b.type]||0) || a.name.localeCompare(b.name);
+    });
+    sorted.forEach(card => {
+      const el = document.createElement('div');
+      el.className = `deck-viewer-card ${card.type}`;
+      el.innerHTML = `
+        <div class="card-cost">${card.cost}</div>
+        <div class="card-name">${card.name}</div>
+        <div class="card-type-label" style="font-size:8px">${card.type==='attack'?'攻击':card.type==='skill'?'技能':'能力'}</div>
+        <div class="card-art" style="min-height:24px"></div>
+        <div class="card-desc">${card.desc}</div>
+      `;
+      deckViewerGrid.appendChild(el);
+    });
+    deckViewerOverlay.classList.add('visible');
+  }
+
+  function closeDeckViewer() {
+    deckViewerOverlay.classList.remove('visible');
+  }
+
+  deckViewerBtn.addEventListener('click', openDeckViewer);
+  deckViewerClose.addEventListener('click', closeDeckViewer);
+  deckViewerOverlay.addEventListener('click', (e) => {
+    if (e.target === deckViewerOverlay) closeDeckViewer();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeDeckViewer();
+    }
+  });
+
+  // ============ Particle Background ============
+  function createParticles() {
+    const container = $('bg-particles');
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
+      p.style.animationDelay = Math.random() * 8 + 's';
+      p.style.animationDuration = (6 + Math.random() * 8) + 's';
+      container.appendChild(p);
+    }
+  }
+
+  // ============ Event Listeners ============
+  endTurnBtn.addEventListener('click', endTurn);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'e' || e.key === 'E') {
+      if (deckViewerOverlay.classList.contains('visible')) {
+        closeDeckViewer();
+      } else {
+        endTurn();
+      }
+    }
+  });
+
+  createParticles();
+  initGame();
+
+})();
+</script>
+</body>
+</html>
